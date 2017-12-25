@@ -1,3 +1,4 @@
 *.apk
 .vscode
 .pyc
+*.bak
