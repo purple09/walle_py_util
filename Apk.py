@@ -12,9 +12,10 @@ import json
 
 
 def getParams(argv):
-    global dir, channels
+    global dir, channels, apkPath
     try:
-        opts, args = getopt.getopt(argv, "hd:c:", ["help","dir=", "channels="])
+        opts, args = getopt.getopt(
+            argv, "hd:c:f:", ["help", "dir=", "channels=", "file="])
     except getopt.GetoptError:
         print 'APK.py -d <appdir> -c <channels>'
         sys.exit(2)
@@ -26,6 +27,8 @@ def getParams(argv):
             dir = arg
         elif opt in ("-c", "--channels"):
             channels = arg
+        elif opt in ("-f", "--file"):
+            apkPath = arg
 # 读取配置文件
 
 
@@ -57,6 +60,7 @@ def checkV2(apkPath):
 
 dir = ''
 channels = ''
+apkPath = ''
 if __name__ == "__main__":
     getParams(sys.argv[1:])
 # 根目录
@@ -76,7 +80,8 @@ walle = os.path.join(libPath, 'walle-cli-all.jar')
 checkAndroidV2Signature = os.path.join(libPath, 'CheckAndroidV2Signature.jar')
 zipalign = os.path.join(AndroidBuildToolPath, 'zipalign')
 apksigner = os.path.join(AndroidBuildToolPath, 'apksigner')
-apkPath = os.path.join(appPath, apkName)
+if apkPath == '':
+    apkPath = os.path.join(appPath, apkName)
 channelPath = os.path.join(appPath, 'channel')
 if not os.path.exists(channelPath):
     channelPath = os.path.join(rootPath, 'channel')
@@ -92,6 +97,7 @@ except Exception:
 if checkV2(apkPath):
     channelAPkPath = apkPath
 else:
+    print '未签名'
     # zipalign
     zipalignCmd = zipalign + " -v 4 " + apkPath + " " + zipalignedApkPath
     print commands.getoutput(zipalignCmd)
@@ -111,3 +117,9 @@ else:
     walleCmd += " batch -f " + channelPath + " "
 walleCmd = walleCmd + channelAPkPath + " " + outputPath
 print commands.getoutput(walleCmd)
+# 删除中间文件
+if os.path.exists(zipalignedApkPath):
+    os.remove(zipalignedApkPath)
+if os.path.exists(signedApkPath):
+    os.remove(signedApkPath)
+print '打包结束'
