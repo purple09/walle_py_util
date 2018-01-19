@@ -24,5 +24,5 @@
 - 子目录的 config.conf 覆盖 defaultConfig.conf,仅需配置要修改的字段
 - 若子目录有 channel 文件，则不使用父目录的 channel 文件
 - apk 文件也要放在子目录中，如命名不同记得修改 config.conf 文件
-- 渠道包在子目录的 apks 目录中
+- 渠道包在子目录的 apks 目录中
 - 可使用-d 命令实现多项目配置
