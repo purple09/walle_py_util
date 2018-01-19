@@ -105,10 +105,6 @@ apkPath = ''
 jiagu360Channels = ''
 if __name__ == "__main__":
     getParams(sys.argv[1:])
-# python /Users/guizhen/work/python/walle_py_util/Apk.py -d test -j -f /Users/guizhen/work/project/mobile_smm/mobile_android/smm/app/apk/smm/release/smm-v3.9.2-20180108-1045test.apk
-dir = 'test'
-jiagu360Channels = '-360'
-apkPath = '/Users/guizhen/work/project/mobile_smm/mobile_android/smm/app/apk/smm/release/smm-v3.9.2-20180108-1045test.apk'
 # 根目录
 rootPath = sys.path[0]
 appPath = rootPath
