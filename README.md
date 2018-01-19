@@ -18,6 +18,7 @@
 - -d 或 --dir \<dirName>,如 -d app1
 - -c 或 --channels \<channels>,如 -c baidu,tencent,wandoujia
 - -f 或 --file \<filePath>,apk 文件绝对路径，可直接把 apk 文件拖到命令行工具，生成文件依然在根目录
+- -j 或 --jiagu360  自动添加一个‘_360’的渠道，自动上传360加固下载并签名加渠道标记,需要配置360帐号密码（注，360加固的x86 支持需要手动勾选）
 
 ## 子目录使用说明
 - 子目录的 config.conf 覆盖 defaultConfig.conf,仅需配置要修改的字段

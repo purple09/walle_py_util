@@ -7,15 +7,16 @@ import ConfigParser
 import getopt
 import commands
 import json
+import jiagu
 
 # 获取参数
 
 
 def getParams(argv):
-    global dir, channels, apkPath
+    global dir, channels, apkPath, jiagu360Channels
     try:
         opts, args = getopt.getopt(
-            argv, "hd:c:f:", ["help", "dir=", "channels=", "file="])
+            argv, "hd:c:f:j", ["help", "dir=", "channels=", "file=", "jiagu360"])
     except getopt.GetoptError:
         print 'APK.py -d <appdir> -c <channels>'
         sys.exit(2)
@@ -29,11 +30,13 @@ def getParams(argv):
             channels = arg
         elif opt in ("-f", "--file"):
             apkPath = arg
+        elif opt in ("-j", "--jiagu360"):
+            jiagu360Channels = '_360'
 # 读取配置文件
 
 
 def initCongig(configPath):
-    global keystorePath, keyAlias, keystorePassword, keyPassword, apkName, AndroidBuildToolPath
+    global keystorePath, keyAlias, keystorePassword, keyPassword, apkName, AndroidBuildToolPath, _360user, _360pwd
     cf = ConfigParser.ConfigParser()
     cf.read(configPath)
     if cf.has_option(configSection, 'keystorePath'):
@@ -48,29 +51,72 @@ def initCongig(configPath):
         apkName = cf.get(configSection, 'apkName')
     if cf.has_option(configSection, 'AndroidBuildToolPath'):
         AndroidBuildToolPath = cf.get(configSection, 'AndroidBuildToolPath')
+    if cf.has_option(configSection, '_360user'):
+        _360user = cf.get(configSection, '_360user')
+    if cf.has_option(configSection, '_360pwd'):
+        _360pwd = cf.get(configSection, '_360pwd')
+
 # 校验v2签名
 
 
-def checkV2(apkPath):
+def checkV2(apk):
     output = commands.getoutput(
-        "java -jar " + checkAndroidV2Signature + " " + apkPath)
+        "java -jar " + checkAndroidV2Signature + " " + apk)
     print output
     return json.loads(output)['isV2OK']
+
+
+def package(apk, isJiagu360):
+    if checkV2(apk):
+        channelAPkPath = apk
+    else:
+        print '未签名'
+        # zipalign
+        zipalignCmd = zipalign + " -v 4 " + apk + " " + zipalignedApkPath
+        commands.getoutput(zipalignCmd)
+        # sign
+        signCmd = apksigner + " sign --ks " + keystorePath \
+            + " --ks-key-alias " + keyAlias \
+            + " --ks-pass pass:" + keystorePassword \
+            + " --key-pass pass:" + keyPassword \
+            + " --out " + signedApkPath + " " + zipalignedApkPath
+        commands.getoutput(signCmd)
+        channelAPkPath = signedApkPath
+     # walle
+    walleCmd = "java -jar " + walle
+    if isJiagu360:
+        walleCmd += " batch -c " + jiagu360Channels + " "
+    elif channels != '':
+        walleCmd += " batch -c " + channels + " "
+    else:
+        walleCmd += " batch -f " + channelPath + " "
+    walleCmd = walleCmd + channelAPkPath + " " + outputPath
+    print commands.getoutput(walleCmd)
+    # 删除中间文件
+    if os.path.exists(zipalignedApkPath):
+        os.remove(zipalignedApkPath)
+    if os.path.exists(signedApkPath):
+        os.remove(signedApkPath)
 
 
 dir = ''
 channels = ''
 apkPath = ''
+jiagu360Channels = ''
 if __name__ == "__main__":
     getParams(sys.argv[1:])
+# python /Users/guizhen/work/python/walle_py_util/Apk.py -d test -j -f /Users/guizhen/work/project/mobile_smm/mobile_android/smm/app/apk/smm/release/smm-v3.9.2-20180108-1045test.apk
+dir = 'test'
+jiagu360Channels = '-360'
+apkPath = '/Users/guizhen/work/project/mobile_smm/mobile_android/smm/app/apk/smm/release/smm-v3.9.2-20180108-1045test.apk'
 # 根目录
-rootPath = os.getcwd()
+rootPath = sys.path[0]
 appPath = rootPath
 if dir != '':
     appPath = os.path.join(rootPath, dir)
 # 读取配置文件
 configSection = 'info'
-initCongig('defaultConfig.conf')
+initCongig(os.path.join(rootPath, 'defaultConfig.conf'))
 if dir != '':
     initCongig(os.path.join(dir, 'config.conf'))
 # print keystorePath, keyAlias, keystorePassword, keyPassword, apkName, AndroidBuildToolPath
@@ -94,32 +140,14 @@ try:
 except Exception:
     pass
 
-if checkV2(apkPath):
-    channelAPkPath = apkPath
-else:
-    print '未签名'
-    # zipalign
-    zipalignCmd = zipalign + " -v 4 " + apkPath + " " + zipalignedApkPath
-    print commands.getoutput(zipalignCmd)
-    # sign
-    signCmd = apksigner + " sign --ks " + keystorePath \
-        + " --ks-key-alias " + keyAlias \
-        + " --ks-pass pass:" + keystorePassword \
-        + " --key-pass pass:" + keyPassword \
-        + " --out " + signedApkPath + " " + zipalignedApkPath
-    print commands.getoutput(signCmd)
-    channelAPkPath = signedApkPath
-# walle
-walleCmd = "java -jar " + walle
-if channels != '':
-    walleCmd += " batch -c " + channels + " "
-else:
-    walleCmd += " batch -f " + channelPath + " "
-walleCmd = walleCmd + channelAPkPath + " " + outputPath
-print commands.getoutput(walleCmd)
-# 删除中间文件
-if os.path.exists(zipalignedApkPath):
-    os.remove(zipalignedApkPath)
-if os.path.exists(signedApkPath):
-    os.remove(signedApkPath)
+package(apkPath, False)
+if jiagu360Channels != '':
+    jiagu.login(_360user, _360pwd)
+    jiagu.jiagu(apkPath, outputPath)
+    jiaguApkPath = jiagu.findJiaguApk(apkPath, outputPath)
+    package(jiaguApkPath, True)
+    if os.path.exists(jiaguApkPath):
+        os.remove(jiaguApkPath)
+
+
 print '打包结束'
